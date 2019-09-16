@@ -111,4 +111,10 @@ public interface OrderService {
      * @return
      */
     int checkWXPay(Order order);
+
+    /***
+     * 用户点击取消订单
+     * @param id
+     */
+    void cancelOrder(String id);
 }

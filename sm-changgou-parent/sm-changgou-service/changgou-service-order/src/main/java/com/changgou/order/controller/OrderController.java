@@ -27,6 +27,20 @@ public class OrderController {
 
 
     /****
+     * 用户在我的订单 页面点击取消订单(前端传递该订单的id到后台)
+     * @param id
+     * @return
+     */
+    @PostMapping("/cancelorder/{id}")
+    public Result cancelOrder ( @PathVariable(value = "id") String id ){
+        orderService.cancelOrder(id);
+        return new Result(true,StatusCode.OK,"订单取消成功");
+    }
+
+
+
+
+    /****
      * 查询当前登录用户的订单信息、
      *
      * @return

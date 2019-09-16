@@ -91,11 +91,7 @@ public class WXPayDelayMessageListener {
             OrderItem orderItem = new OrderItem();
             orderItem.setOrderId(order.getId());
             // 根据orderId查询出全部的OrderItem 然后将OrderItem中的skuId 存放到数组中
-            List<OrderItem> orderItems = orderItemMapper.select(orderItem);
-            Map<String, Object> skuIdAndNumMap = new HashMap<String, Object>();
-            for (OrderItem Item : orderItems) {
-                skuIdAndNumMap.put(Item.getSkuId().toString(), Item.getSkuId());
-            }
+            Map<String, Object> skuIdAndNumMap = skuIdsAndNumMap(order.getId());
             //2.删除OrderItem数据
             orderItemMapper.delete(orderItem);
             //3.回滚goods中的商品库存(调用goods微服务)
@@ -109,5 +105,31 @@ public class WXPayDelayMessageListener {
             System.out.println(e.getMessage());
             System.err.println("执行失败");
         }
+    }
+    /***
+     * 根据orderId查询出对应的 skuId(key) , num(value)
+     * @param orderId
+     * @return
+     */
+
+    public Map<String, Object> skuIdsAndNumMap(String orderId) {
+        //创建map 封装返回数据
+        Map<String, Object> map = new HashMap<String, Object>();
+        //查询对应的OrderItem
+        OrderItem orderItem = new OrderItem();
+        //将orderId设置到OrderItem中(作为查询条件)
+        orderItem.setOrderId(orderId);
+        List<OrderItem> orderItems = orderItemMapper.select(orderItem);
+
+        //遍历orderItems获取对应的sku和num 封装成map
+        if (orderItems != null && orderItems.size() > 0) {
+            for (OrderItem item : orderItems) {
+                Long skuId = item.getSkuId();
+                String skuidstr = skuId.toString();
+                map.put(skuidstr, item.getNum());
+            }
+
+        }
+        return map;
     }
 }

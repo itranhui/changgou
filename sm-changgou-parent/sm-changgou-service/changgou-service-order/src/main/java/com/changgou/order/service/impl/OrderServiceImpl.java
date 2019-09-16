@@ -1,6 +1,7 @@
 package com.changgou.order.service.impl;
 
 import com.changgou.entity.IdWorker;
+import com.changgou.entity.Result;
 import com.changgou.goods.feign.SkuFeign;
 import com.changgou.goods.pojo.Para;
 import com.changgou.order.dao.OrderItemMapper;
@@ -9,6 +10,7 @@ import com.changgou.order.pojo.Order;
 import com.changgou.order.pojo.OrderItem;
 import com.changgou.order.service.OrderService;
 import com.changgou.user.feign.UserFeign;
+import com.changgou.user.pojo.User;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import io.seata.spring.annotation.GlobalTransactional;
@@ -71,7 +73,30 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-
+    /***
+     * 用户点击取消订单
+     * @param id 订单id
+     */
+    @GlobalTransactional//开启分布式事务
+    @Override
+    public void cancelOrder(String id) {
+        //1.根据订单id查询出所有的 OrderItem
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrderId(id);
+        Map<String, Object> skuIdsAndNumMap = skuIdsAndNumMap(id);
+        //2.回滚该商品对应的库存数据
+        skuFeign.addCount(skuIdsAndNumMap);
+        //3.回滚用户对应的积分数据 //查询出该订单用户
+        Order order = orderMapper.selectByPrimaryKey(id);
+        String username = order.getUsername();
+        Result<User> result =userFeign.findById(username);
+        User user = result.getData();
+        user.setPoints(user.getPoints()+1);
+        //更新用户信息
+        userFeign.update(user,username);
+        //4.删除订单
+        orderMapper.deleteByPrimaryKey(id);
+    }
 
     /***
      * 判断支付失败的订单在一定时间后是否支付成功
