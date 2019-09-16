@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import tk.mybatis.spring.annotation.MapperScan;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -113,7 +115,18 @@ public class WeixinPayServiceImpl implements WeixinPayService {
             paramMap.put("notify_url", notifyurl);
             //交易类型
             paramMap.put("trade_type", "NATIVE");
+            //设置二维码的有效时期
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+            Date date = new Date();
+            String time_start = simpleDateFormat.format(date);
+            paramMap.put("time_start",time_start);
 
+            //将 time_start转换成 Long 然后加上100  那么就是有效期1分钟
+            Long time_expire = Long.valueOf(time_start);
+            time_expire =  time_expire+ 100l;
+            String time_ecpire_str = time_expire.toString();
+            //设置二维码到期时间
+            paramMap.put("time_expire",time_ecpire_str);
 
 
             //创建自定义的数据  存放交换机名称，和队列名称传递过来
