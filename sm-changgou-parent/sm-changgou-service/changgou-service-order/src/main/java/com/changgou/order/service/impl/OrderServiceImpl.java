@@ -1,19 +1,24 @@
 package com.changgou.order.service.impl;
 
+import com.changgou.entity.DateUtil;
+import com.changgou.entity.DateUtils;
 import com.changgou.entity.IdWorker;
 import com.changgou.entity.Result;
 import com.changgou.goods.feign.SkuFeign;
 import com.changgou.goods.pojo.Para;
 import com.changgou.order.dao.OrderItemMapper;
 import com.changgou.order.dao.OrderMapper;
+import com.changgou.order.dao.UserTakeDeliiverOfGoodsMapper;
 import com.changgou.order.pojo.Order;
 import com.changgou.order.pojo.OrderItem;
+import com.changgou.order.pojo.UserTakeDeliiverOfGoods;
 import com.changgou.order.service.OrderService;
 import com.changgou.user.feign.UserFeign;
 import com.changgou.user.pojo.User;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import io.seata.spring.annotation.GlobalTransactional;
+import net.bytebuddy.implementation.bytecode.Throw;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
@@ -28,6 +33,8 @@ import tk.mybatis.mapper.entity.Example;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+import static com.changgou.entity.DateUtils.getDateDifference;
 
 /****
  * @Author:www.itheima.com
@@ -73,6 +80,75 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private UserTakeDeliiverOfGoodsMapper userTakeDeliiverOfGoodsMapper;
+
+    /***
+     * 用户提醒发货
+     * @param map
+     */
+    @Override
+    public void remindGoods(Map<String, String> map) {
+        String username = map.get("username");
+        //前端传递过来的用户提醒发货的时间
+        String take_time = map.get("take_time");
+        //提醒发货的该订单id
+        String orderId = map.get("orderId");
+
+        //查询出对应的发货相关数据
+        UserTakeDeliiverOfGoods userTakeDeliiverOfGoods = new UserTakeDeliiverOfGoods();
+        userTakeDeliiverOfGoods.setUsername(username);
+        userTakeDeliiverOfGoods.setOrderId(orderId);
+        //查询对应的数据
+        userTakeDeliiverOfGoods = userTakeDeliiverOfGoodsMapper.selectOne(userTakeDeliiverOfGoods);
+
+        String orderPayTimeStr = null;
+        String remindGoodsTimeStr = null;
+
+        try {
+            Date orderPayTime = userTakeDeliiverOfGoods.getOrderPayTime();
+            //获取用户的支付时间
+            orderPayTimeStr = DateUtils.parseDate2String(orderPayTime);
+            //获取用户的最近一次的提醒发货时间
+            Date remindGoodsTime = userTakeDeliiverOfGoods.getRemindGoodsTime();
+            remindGoodsTimeStr = DateUtils.parseDate2String(remindGoodsTime);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        Integer intDateNewAndPayTime = null;
+        try {
+            //比较两个时间 ：当前时间和支付时间
+            String dateDifference = getDateDifference(take_time, orderPayTimeStr);
+            intDateNewAndPayTime =  Integer.parseInt(dateDifference.substring(0,1));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        //如果当前时间比支付时间大于一天，说明可以提醒发货
+        if (intDateNewAndPayTime<1){
+            //说明两个时间之间并没有相隔1天所以不能提醒发货
+            throw new RuntimeException("当前商品购买时间不足一天不能提醒发货，请一天后再试!");
+        }
+        //如果当前的时间比上次提醒发货时间大于一天，说明可以提醒发货
+        Integer intDateNewAndremindTime = null;
+        try {
+            String dateDifference = getDateDifference(take_time, remindGoodsTimeStr);
+            intDateNewAndremindTime = Integer.parseInt(dateDifference.substring(0,1));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (intDateNewAndremindTime<1){
+            //说明一天时间之内提醒过发货的所以不能一天不能多次提醒
+            throw  new RuntimeException("一天之内提醒过发货，一天只能提醒一次");
+        }
+        //说明可以提醒发货，下单也已经超过了一天，上次提醒时间也已经过了一天 那么就可以提醒，更新该商品的提醒时间
+        try {
+            userTakeDeliiverOfGoods.setRemindGoodsTime(DateUtils.parseString2Date(take_time));
+            userTakeDeliiverOfGoodsMapper.updateByPrimaryKeySelective(userTakeDeliiverOfGoods);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     /***
      * 用户点击取消订单
      * @param id 订单id
@@ -89,11 +165,11 @@ public class OrderServiceImpl implements OrderService {
         //3.回滚用户对应的积分数据 //查询出该订单用户
         Order order = orderMapper.selectByPrimaryKey(id);
         String username = order.getUsername();
-        Result<User> result =userFeign.findById(username);
+        Result<User> result = userFeign.findById(username);
         User user = result.getData();
-        user.setPoints(user.getPoints()+1);
+        user.setPoints(user.getPoints() + 1);
         //更新用户信息
-        userFeign.update(user,username);
+        userFeign.update(user, username);
         //4.删除订单
         orderMapper.deleteByPrimaryKey(id);
     }
@@ -106,7 +182,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public int checkWXPay(Order order) {
         String payStatus = order.getPayStatus();
-        if ("1".equals(payStatus)){
+        if ("1".equals(payStatus)) {
             //说明支付成功
             return 1;
         }

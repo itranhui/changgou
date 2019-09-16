@@ -2,6 +2,7 @@ package com.changgou.order.controller;
 
 import com.changgou.entity.TokenDecode;
 import com.changgou.order.pojo.Order;
+import com.changgou.order.pojo.OrderItem;
 import com.changgou.order.service.OrderService;
 import com.github.pagehelper.PageInfo;
 import com.changgou.entity.Result;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /****
  * @Author:www.itheima.com
@@ -24,6 +26,41 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+
+    /***
+     *1.用户点击提醒发货，那么前端要传递一个时间对象到后台(时间格式是 yyyyy-MM-dd HH:mm:ss)，并且和该订单的id
+     *2.后端可用获取登录用户的用户信息
+     *3.后端返回 0：提醒发货失败,并把失败的原因返回给前端
+     *          1：表示提醒发货成功 修改提醒发货的时间
+     */
+    @PostMapping("/remind")
+    public Result remindGoods(@RequestBody Map<String,String> map){
+        //获取当前用户登录信息 并保存到map集合中一并传递给OrderService
+        String username = TokenDecode.getUserInfo().get("username");
+        map.put("username",username);
+        try {
+            orderService.remindGoods(map);
+            return new Result(true,StatusCode.OK,"提醒发货成功");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Result(false,StatusCode.ERROR,"提醒发货失败",e.getMessage());
+        }
+    }
+
+    /****
+     *
+     * 查询出该用户所对应的所有数据(OrderItem)
+     *
+     *
+     */
+@GetMapping("/getitem/{id}")
+public Result<List<OrderItem>> getOrderToOrderItem(@PathVariable(value = "id") String id){
+    List<OrderItem> orderItems = orderService.selectOrderItems(id);
+    return new Result<>(true,StatusCode.OK,"订单商品数据查询成功",orderItems);
+}
+
+
 
 
     /****

@@ -117,4 +117,10 @@ public interface OrderService {
      * @param id
      */
     void cancelOrder(String id);
+
+    /***
+     * 用户提醒发货
+     * @param map
+     */
+    void remindGoods(Map<String, String> map);
 }
