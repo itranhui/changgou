@@ -72,6 +72,22 @@ public class OrderServiceImpl implements OrderService {
     private RabbitTemplate rabbitTemplate;
 
 
+
+    /***
+     * 判断支付失败的订单在一定时间后是否支付成功
+     * @param order
+     * @return
+     */
+    @Override
+    public int checkWXPay(Order order) {
+        String payStatus = order.getPayStatus();
+        if ("1".equals(payStatus)){
+            //说明支付成功
+            return 1;
+        }
+        return 0;
+    }
+
     /***
      * 查询用户的订单信息
      * @param username

@@ -51,10 +51,13 @@ mq:
   pay:
     exchange:
       order: exchange.order
+      atonceorderexchange: atoncexchange.atonceorder
     queue:
       order: queue.order
+      atonceorderqueue: atoncequeue.atonceorder
     routing:
       key: queue.order
+      atoncekey: atoncequeue.atonceorder
 #微信支付信息配置
 weixin:
   #应用ID

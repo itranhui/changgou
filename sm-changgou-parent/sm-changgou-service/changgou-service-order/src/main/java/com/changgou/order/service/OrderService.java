@@ -104,4 +104,11 @@ public interface OrderService {
      * @return
      */
     List<Order> selectOrderUsername(String username);
+
+    /***
+     * 判断支付失败的订单在一定时间后是否支付成功
+     * @param order
+     * @return
+     */
+    int checkWXPay(Order order);
 }

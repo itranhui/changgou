@@ -48,9 +48,12 @@ mq:
     exchange:
       order: exchange.order
       seckillorder: seckillexchange.seckillorder
+      atonceorderexchange: atoncexchange.atonceorder
     queue:
       order: queue.order
       seckillorder: seckillqueue.seckillorder
+      atonceorderqueue: atoncequeue.atonceorder
     routing:
       key: queue.order
       seckillkey: seckillqueue.seckillorder
+      atoncekey: atoncequeue.atonceorder
