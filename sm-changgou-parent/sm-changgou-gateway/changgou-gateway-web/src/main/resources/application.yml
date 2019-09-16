@@ -1,0 +1,74 @@
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]': # 匹配所有请求
+            allowedOrigins: "*" #跨域处理 允许所有的域
+            allowedMethods: # 支持的方法
+              - GET
+              - POST
+              - PUT
+              - DELETE
+      routes:
+        - id: changgou_goods_route
+          uri: lb://goods
+          predicates:
+            - Path=/api/brand/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter #请求数限流 名字不能随便写 ，使用默认的facatory
+              args:
+                key-resolver: "#{@ipKeyResolver}"   #  用于通过SPEL表达式拉指定使用 哪一个KeyResolver    Resolver   解析器
+                redis-rate-limiter.replenishRate: 1 #  令牌桶的填充速率(replenishRate) 希望用户每秒执行多少次请求，不会丢弃 任何请求 (也就是令牌桶填充的速率1r/s)
+                redis-rate-limiter.burstCapacity: 3 # 令牌桶的最大容量(burstCapacity)  允许在一秒中完成的最大请求次数 如果此值为0的话那么就会阻止所有的请求
+        #用户微服务
+        - id: changgou_user_route
+          uri: lb://user
+          predicates:
+            - Path=/api/user/**,/api/address/**,/api/areas/**,/api/cities/**,/api/provinces/**
+          filters:
+            - StripPrefix=1
+        #订单详情微服务
+        - id: changgou_order_route
+          uri: lb://order
+          predicates:
+            - Path=/api/cart/**,/api/categoryReport/**,/api/orderConfig/**,/api/order/**,/api/orderItem/**,/api/orderLog/**,/api/preferential/**,/api/returnCause/**,/api/returnOrder/**,/api/returnOrderItem/**
+          filters:
+            - StripPrefix=1
+        #认证微服务
+        - id: changgou_oauth_route
+          uri: lb://user-auth
+          predicates:
+            - Path=/api/user/login/**
+          filters:
+            - StripPrefix=1
+        #商品微服务
+        - id: changgou_user_route
+          uri: lb://goods
+          predicates:
+            - Path=/api/sku/**
+          filters:
+            - StripPrefix=1
+  application:
+    name: gateway-web
+  #Redis配置
+  redis:
+    host: 192.168.211.132
+    port: 6379
+
+server:
+  port: 5001
+eureka:
+  client:
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka
+  instance:
+    prefer-ip-address: true
+management:
+  endpoint:
+    gateway:
+      enabled: true
+    web:
+      exposure:
+        include: true
