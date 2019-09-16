@@ -97,4 +97,11 @@ public interface OrderService {
      * @return
      */
     Map<String, Object> skuIdsAndNumMap(String orderId);
+
+    /***
+     * 查询用户的订单信息
+     * @param username
+     * @return
+     */
+    List<Order> selectOrderUsername(String username);
 }

@@ -49,8 +49,8 @@ public class OrderServiceImpl implements OrderService {
     /***
      * 添加订单明细(主要 作用)
      */
-   @Autowired
-   private OrderItemMapper orderItemMapper;
+    @Autowired
+    private OrderItemMapper orderItemMapper;
 
     /***
      * 注入SkuFeign(对应商品的库存数量 递减)
@@ -73,6 +73,18 @@ public class OrderServiceImpl implements OrderService {
 
 
     /***
+     * 查询用户的订单信息
+     * @param username
+     * @return
+     */
+    @Override
+    public List<Order> selectOrderUsername(String username) {
+        Order order = new Order();
+        order.setUsername(username);
+        return orderMapper.select(order);
+    }
+
+    /***
      * 根据orderId查询出对应的 skuId(key) , num(value)
      * @param orderId
      * @return
@@ -80,7 +92,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Map<String, Object> skuIdsAndNumMap(String orderId) {
         //创建map 封装返回数据
-        Map<String,Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<String, Object>();
         //查询对应的OrderItem
         OrderItem orderItem = new OrderItem();
         //将orderId设置到OrderItem中(作为查询条件)
@@ -88,11 +100,11 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> orderItems = orderItemMapper.select(orderItem);
 
         //遍历orderItems获取对应的sku和num 封装成map
-        if (orderItems!=null&& orderItems.size()>0) {
+        if (orderItems != null && orderItems.size() > 0) {
             for (OrderItem item : orderItems) {
                 Long skuId = item.getSkuId();
-                String  skuidstr =  skuId.toString();
-                map.put(skuidstr,item.getNum());
+                String skuidstr = skuId.toString();
+                map.put(skuidstr, item.getNum());
             }
 
         }
@@ -115,7 +127,7 @@ public class OrderServiceImpl implements OrderService {
         //物理删除 todo OrderItem 没有设置逻辑删除的 判断列(需要设置为逻辑删除的列)
         orderMapper.deleteByPrimaryKey(orderId);
         //2.根据orderId 删除对应的orderItem数据(逻辑删除)
-        OrderItem orderItem =new OrderItem();
+        OrderItem orderItem = new OrderItem();
         orderItem.setOrderId(orderId);
         //删除orderItem
         orderItemMapper.delete(orderItem);
@@ -131,7 +143,7 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderItem> selectOrderItems(String out_trade_no) {
         OrderItem orderItem = new OrderItem();
         orderItem.setOrderId(out_trade_no);
-        return  orderItemMapper.select(orderItem);
+        return orderItemMapper.select(orderItem);
     }
 
     /***
@@ -168,16 +180,16 @@ public class OrderServiceImpl implements OrderService {
     public void add(Order order) {
         //查询相关数据(redis)
         //获取到客户勾选的所有的商品id，然后根据id去redis中取出对应的数据(需要下单的商品)
-        Long [] skuIds = order.getSkuIds();
+        Long[] skuIds = order.getSkuIds();
         //定义集合储存每个对应的orderItem
         List<OrderItem> orderItems = new ArrayList<OrderItem>();
-        for (Long  skuId : skuIds) {
+        for (Long skuId : skuIds) {
             //从redis中查询数据
             //添加到集合(orderItems)
-           orderItems.add((OrderItem) redisTemplate.boundHashOps("cat_" + order.getUsername()).get(skuId));
+            orderItems.add((OrderItem) redisTemplate.boundHashOps("cat_" + order.getUsername()).get(skuId));
 
             //因为下单成功后需要删除redis中的对应商品(orderItem->京东商城的做法)
-         //  redisTemplate.boundHashOps("cat_"+order.getUsername()).delete(skuId);
+            //  redisTemplate.boundHashOps("cat_"+order.getUsername()).delete(skuId);
         }
 
         //统计计算
@@ -188,13 +200,13 @@ public class OrderServiceImpl implements OrderService {
 
         //订单下单成功后，那么对应的商品的库存 容量也必须要递减 (递减数量= 原有数量（num）-该商品的购买个数（num）) ,要通过Feign调用goods服务
         //需要的参数是：skuId，购买数量定义一个map集合key为商品的skuId value为 购买数量
-        Map<String,Object>decrmap = new HashMap<String, Object>();
+        Map<String, Object> decrmap = new HashMap<String, Object>();
         //遍历orderItems集合完善order数据
         for (OrderItem orderItem : orderItems) {
-            num+=orderItem.getNum();
-            totalMoney+=orderItem.getMoney();
+            num += orderItem.getNum();
+            totalMoney += orderItem.getMoney();
             //订单下单成功后，那么对应的商品的库存 容量也必须要递减 (递减数量= 原有数量（num）-该商品的购买个数（num）)
-            decrmap.put(orderItem.getSkuId().toString(),orderItem.getNum());
+            decrmap.put(orderItem.getSkuId().toString(), orderItem.getNum());
         }//总商品数量
         order.setTotalNum(num);
         //总金额
@@ -217,10 +229,10 @@ public class OrderServiceImpl implements OrderService {
         //返回的是下单成功的订单数量
         int count = orderMapper.insertSelective(order);
 
-       //调用 SkuFeign执行库存递减
+        //调用 SkuFeign执行库存递减
         skuFeign.decrCount(decrmap);
         //用户下单后那么要对对应的用户增加10个积分(userFeign)
-        userFeign.addUserPoints(order.getUsername(),10);
+        userFeign.addUserPoints(order.getUsername(), 10);
 
         /***
          * 注解：todo   (一个参数必须也要加注解)
@@ -236,7 +248,7 @@ public class OrderServiceImpl implements OrderService {
          * par3：延时队列的设置；设置延时读取
          */
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        System.out.println("创建订单时间："+simpleDateFormat.format(new Date()));
+        System.out.println("创建订单时间：" + simpleDateFormat.format(new Date()));
         rabbitTemplate.convertAndSend("orderDelayQueue", (Object) order.getId(), new MessagePostProcessor() {
             //延时(超时队列)的设置
             @Override

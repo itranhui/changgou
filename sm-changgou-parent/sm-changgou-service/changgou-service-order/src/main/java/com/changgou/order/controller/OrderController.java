@@ -26,6 +26,20 @@ public class OrderController {
     private OrderService orderService;
 
 
+    /****
+     * 查询当前登录用户的订单信息、
+     *
+     * @return
+     */
+    @GetMapping("selectorder")
+    public Result selectOrderUsername(){
+
+        //获取到当前用户登录信息，从中获取用户名
+        String username = TokenDecode.getUserInfo().get("username");
+        //查询该用户的订单信息
+        List<Order> orders =  orderService.selectOrderUsername(username);
+        return new Result<List<Order>>(true,StatusCode.OK,"用户订单信息查询成功",orders);
+    }
 
 
 
