@@ -123,4 +123,11 @@ public interface OrderService {
      * @param map
      */
     void remindGoods(Map<String, String> map);
+
+    /***
+     * 用户确认收货 用户点击确认收货后修改订单的是否收货确认信息，修改订单的为已完成状态
+     * @param username
+     * @param id
+     */
+    void receivingOk(String username, String id);
 }

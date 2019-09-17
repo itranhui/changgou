@@ -27,6 +27,24 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    /*****
+     * 用户确认收货 用户点击确认收货后修改订单的是否收货确认信息，修改订单的为已完成状态
+     * @param id
+     * @return
+     */
+    @GetMapping("/eceiving/{id}")
+    public Result receivingOk(@PathVariable (value = "id") String id){
+        //获取用户登录的登录名
+        String username = TokenDecode.getUserInfo().get("username");
+        try {
+            orderService.receivingOk(username,id);
+            return new Result(true,StatusCode.OK,"确认收货成功");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Result(false,StatusCode.ERROR,"确认收货失败",e.getMessage());
+        }
+    }
+
 
     /***
      *1.用户点击提醒发货，那么前端要传递一个时间对象到后台(时间格式是 yyyyy-MM-dd HH:mm:ss)，并且和该订单的id

@@ -83,6 +83,42 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private UserTakeDeliiverOfGoodsMapper userTakeDeliiverOfGoodsMapper;
 
+    /**
+     * 用户确认收货 用户点击确认收货后修改订单的是否收货确认信息，修改订单的为已完成状态
+     * 1.判断当前订单是否已经发货，如果没有发货不能确认收货
+     *
+     * @param username
+     * @param id
+     */
+    @Override
+    public void receivingOk(String username, String id) {
+        //怕段是否可以收货
+        Order order = orderMapper.selectByPrimaryKey(id);
+        String consignStatus = order.getConsignStatus();
+        if (consignStatus.equals("0")) {
+            throw new RuntimeException("商品暂时还未发货,不能收货");
+        }
+        //说明 可以收货 修改订单相关数据
+        UserTakeDeliiverOfGoods userTakeDeliiverOfGoods = new UserTakeDeliiverOfGoods();
+        userTakeDeliiverOfGoods.setUsername(username);
+        userTakeDeliiverOfGoods.setOrderId(id);
+        userTakeDeliiverOfGoods = userTakeDeliiverOfGoodsMapper.selectOne(userTakeDeliiverOfGoods);
+        //收货时间
+        userTakeDeliiverOfGoods.setTakeDeliveryOfGoods(new Date());
+        //是否收货
+        userTakeDeliiverOfGoods.setIsToke("1");
+        //更新数据
+        userTakeDeliiverOfGoodsMapper.updateByPrimaryKeySelective(userTakeDeliiverOfGoods);
+        //更新Order中的相关数据
+        //修改交易完成时间
+        order.setEndTime(new Date());
+        //设置订单状态为已完成
+        order.setOrderStatus("1");
+        //设置已经收货
+        order.setConsignStatus("2");
+        orderMapper.updateByPrimaryKeySelective(order);
+    }
+
     /***
      * 用户提醒发货
      * @param map
@@ -119,12 +155,12 @@ public class OrderServiceImpl implements OrderService {
         try {
             //比较两个时间 ：当前时间和支付时间
             String dateDifference = getDateDifference(take_time, orderPayTimeStr);
-            intDateNewAndPayTime =  Integer.parseInt(dateDifference.substring(0,1));
+            intDateNewAndPayTime = Integer.parseInt(dateDifference.substring(0, 1));
         } catch (Exception e) {
             e.printStackTrace();
         }
         //如果当前时间比支付时间大于一天，说明可以提醒发货
-        if (intDateNewAndPayTime<1){
+        if (intDateNewAndPayTime < 1) {
             //说明两个时间之间并没有相隔1天所以不能提醒发货
             throw new RuntimeException("当前商品购买时间不足一天不能提醒发货，请一天后再试!");
         }
@@ -132,13 +168,13 @@ public class OrderServiceImpl implements OrderService {
         Integer intDateNewAndremindTime = null;
         try {
             String dateDifference = getDateDifference(take_time, remindGoodsTimeStr);
-            intDateNewAndremindTime = Integer.parseInt(dateDifference.substring(0,1));
+            intDateNewAndremindTime = Integer.parseInt(dateDifference.substring(0, 1));
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if (intDateNewAndremindTime<1){
+        if (intDateNewAndremindTime < 1) {
             //说明一天时间之内提醒过发货的所以不能一天不能多次提醒
-            throw  new RuntimeException("一天之内提醒过发货，一天只能提醒一次");
+            throw new RuntimeException("一天之内提醒过发货，一天只能提醒一次");
         }
         //说明可以提醒发货，下单也已经超过了一天，上次提醒时间也已经过了一天 那么就可以提醒，更新该商品的提醒时间
         try {
