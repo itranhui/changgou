@@ -144,6 +144,10 @@ public class OrderServiceImpl implements OrderService {
         try {
             userTakeDeliiverOfGoods.setRemindGoodsTime(DateUtils.parseString2Date(take_time));
             userTakeDeliiverOfGoodsMapper.updateByPrimaryKeySelective(userTakeDeliiverOfGoods);
+            //修改订单发货状态设置设置为已经发发货
+            Order order = orderMapper.selectByPrimaryKey(orderId);
+            order.setConsignStatus("1");
+            orderMapper.updateByPrimaryKeySelective(order);
         } catch (Exception e) {
             e.printStackTrace();
         }
