@@ -3,8 +3,10 @@ package com.changgou.goods.service.impl;
 import com.changgou.goods.dao.SkuMapper;
 import com.changgou.goods.pojo.Sku;
 import com.changgou.goods.service.SkuService;
+import com.changgou.goods.timer.CollectGoods;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,6 +24,22 @@ public class SkuServiceImpl implements SkuService {
     //注入Dao
     @Autowired
     private SkuMapper skuMapper;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+
+    /***
+     * 新增我的收藏考虑并发问题，将用户对应的添加收藏先写入到redis中 然后再定时的将redis中的数据写入
+     * @param map
+     */
+    @Override
+    public void collect(Map<String, Object> map) {
+        //先将用户的收藏添加到redis中采用hash数据格式   // todo 使用list
+        String username = (String) map.get("username");
+        String skuId =  map.get("skuId").toString();
+      redisTemplate.boundListOps(username).leftPush(skuId);
+    }
 
     /***
      * 库存回滚

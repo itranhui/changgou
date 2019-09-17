@@ -2,11 +2,13 @@ package com.changgou.goods.controller;
 
 import com.changgou.entity.Result;
 import com.changgou.entity.StatusCode;
+import com.changgou.entity.TokenDecode;
 import com.changgou.goods.pojo.Sku;
 import com.changgou.goods.service.SkuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +25,21 @@ public class SkuController {
     @Autowired
     private SkuService skuService;
 
+    /****
+     * 新增我的收藏功能
+     *
+     * @param
+     * @return
+     */
+    @PostMapping("/collect/{id}")
+    public Result collect(@PathVariable ("id") Long id) {
+        Map<String,Object> map = new HashMap<>();
+        String username = TokenDecode.getUserInfo().get("username");
+        map.put("username",username);
+        map.put("skuId",id);
+        skuService.collect(map);
+        return new Result(true,StatusCode.OK,"添加我的收藏成功");
+    }
 
     /***
      * 库存回滚

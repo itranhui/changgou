@@ -52,6 +52,9 @@ public class TokenDecode {
      * 读取令牌数据
      */
     public static Map<String,String> dcodeToken(String token){
+        if (token==null){ //todo 修改了为空判断
+            return null;
+        }
         //校验Jwt
         Jwt jwt = JwtHelper.decodeAndVerify(token, new RsaVerifier(getPubKey()));
 

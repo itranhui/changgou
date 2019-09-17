@@ -35,4 +35,11 @@ public interface SkuService {
      * @param skuIdsAndNumMap
      */
     void addCount(Map<String, Object> skuIdsAndNumMap);
+
+    /****
+     * 新增我的收藏
+     *
+     * @param map
+     */
+    void collect(Map<String, Object> map);
 }
